@@ -1,4 +1,4 @@
-//! Delta filter coder — via `deltazippy` sub-crate.
+//! Delta filter coder — pure-Rust, in-tree.
 //!
 //! 7z's Delta filter (method ID `[0x03]`) is a simple byte-differencing
 //! pre-conditioner. It improves compression of data with regularly-spaced
@@ -9,11 +9,6 @@
 //! One property byte: `distance - 1` (0 → distance 1, 1 → distance 2, …).
 //! A distance of 1 is the most common: each byte is replaced by its difference
 //! from the preceding byte.
-//!
-//! # Backend
-//!
-//! Delegates to `deltazippy::encode` / `deltazippy::decode`.
-//! The implementation is a trivial pure-Rust native impl (no wrapper needed).
 
 use crate::container::MethodId;
 use crate::error::{SevenZippyError, SevenZippyResult};
@@ -24,7 +19,33 @@ use crate::pipeline::Coder;
 /// maximum representable distance is 256.
 const MAX_DISTANCE: usize = 256;
 
-/// Delta filter coder backed by `deltazippy` sub-crate.
+fn encode_delta(data: &[u8], distance: usize) -> Vec<u8> {
+    let distance = distance.clamp(1, MAX_DISTANCE);
+    let mut buf = vec![0u8; distance];
+    let mut out = Vec::with_capacity(data.len());
+    for (i, &b) in data.iter().enumerate() {
+        let channel = i % distance;
+        let delta = b.wrapping_sub(buf[channel]);
+        out.push(delta);
+        buf[channel] = b;
+    }
+    out
+}
+
+fn decode_delta(packed: &[u8], distance: usize) -> Vec<u8> {
+    let distance = distance.clamp(1, MAX_DISTANCE);
+    let mut buf = vec![0u8; distance];
+    let mut out = Vec::with_capacity(packed.len());
+    for (i, &b) in packed.iter().enumerate() {
+        let channel = i % distance;
+        let restored = b.wrapping_add(buf[channel]);
+        out.push(restored);
+        buf[channel] = restored;
+    }
+    out
+}
+
+/// Delta filter coder — pure-Rust in-tree implementation.
 #[derive(Debug)]
 pub struct DeltaCoder {
     /// Byte difference distance: 1 = subtract/add adjacent bytes.
@@ -66,11 +87,11 @@ impl DeltaCoder {
 
 impl Coder for DeltaCoder {
     fn decode(&self, packed: &[u8], _unpacked_size: u64) -> SevenZippyResult<Vec<u8>> {
-        Ok(deltazippy::decode(packed, self.distance))
+        Ok(decode_delta(packed, self.distance))
     }
 
     fn encode(&self, unpacked: &[u8]) -> SevenZippyResult<Vec<u8>> {
-        Ok(deltazippy::encode(unpacked, self.distance))
+        Ok(encode_delta(unpacked, self.distance))
     }
 
     fn method_id(&self) -> MethodId {

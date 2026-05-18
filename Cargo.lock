@@ -20,6 +20,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "aeszippy"
+version = "0.0.3"
+dependencies = [
+ "aes",
+ "cbc",
+ "cipher",
+ "getrandom 0.2.17",
+ "sha2",
+ "thiserror",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -51,6 +63,14 @@ name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
+
+[[package]]
+name = "bcjzippy"
+version = "0.0.3"
+dependencies = [
+ "lzma-rust2",
+ "thiserror",
+]
 
 [[package]]
 name = "bitflags"
@@ -305,13 +325,6 @@ checksum = "78c8292055d1c1df0cce5d180393dc8cce0abec0a7102adb6c7b1eef6016d60a"
 dependencies = [
  "generic-array",
  "typenum",
-]
-
-[[package]]
-name = "deltazippy"
-version = "0.0.1"
-dependencies = [
- "thiserror",
 ]
 
 [[package]]
@@ -571,30 +584,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jumpzippier"
-version = "0.0.2"
-dependencies = [
- "lzma-rust2",
- "thiserror",
-]
-
-[[package]]
-name = "jumpzippy"
-version = "0.0.1"
-dependencies = [
- "lzma-rust2",
- "thiserror",
-]
-
-[[package]]
-name = "lazippier"
-version = "0.0.1"
-dependencies = [
- "lzma-rust2",
- "thiserror",
-]
-
-[[package]]
 name = "lazippy"
 version = "0.0.1"
 dependencies = [
@@ -653,18 +642,6 @@ name = "linux-raw-sys"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
-
-[[package]]
-name = "lockzippy"
-version = "0.0.2"
-dependencies = [
- "aes",
- "cbc",
- "cipher",
- "getrandom 0.2.17",
- "sha2",
- "thiserror",
-]
 
 [[package]]
 name = "log"
@@ -742,14 +719,6 @@ name = "pin-project-lite"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
-
-[[package]]
-name = "pippyzippy"
-version = "0.0.1"
-dependencies = [
- "ppmd-rust",
- "thiserror",
-]
 
 [[package]]
 name = "plotters"
@@ -949,19 +918,18 @@ dependencies = [
 name = "sevenzippy"
 version = "0.0.1"
 dependencies = [
+ "aeszippy",
+ "bcjzippy",
  "bzippy2",
  "crc32fast",
  "criterion",
- "deltazippy",
  "gzippy",
- "jumpzippier",
- "jumpzippy",
- "lazippier",
  "lazippy",
- "lockzippy",
- "pippyzippy",
+ "lzma-rust2",
+ "ppmd-rust",
  "tempfile",
  "thiserror",
+ "xzippy",
 ]
 
 [[package]]
@@ -1332,6 +1300,14 @@ dependencies = [
  "serde_json",
  "unicode-xid",
  "wasmparser",
+]
+
+[[package]]
+name = "xzippy"
+version = "0.1.0"
+dependencies = [
+ "lzma-rust2",
+ "thiserror",
 ]
 
 [[package]]

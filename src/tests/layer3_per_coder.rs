@@ -9,7 +9,7 @@
 //!
 //! # Future additions
 //!
-//! As more sibling crates (lazippier, pippyzippy, …) land, add a test row
+//! As more sibling crates land, add a test row
 //! here modelled on `lazippy_lib_tests_pass`.
 
 use std::process::Command;
@@ -78,9 +78,11 @@ fn lazippy_lib_tests_pass() {
     );
 }
 
-/// Verify that `pippyzippy`'s own lib tests pass from 7zippy's perspective.
+// PPMd is now in-tree; its tests live in src/pipeline/ppmd.rs.
+
+/// Verify that `xzippy`'s own lib tests pass from 7zippy's perspective.
 #[test]
-fn pippyzippy_lib_tests_pass() {
+fn xzippy_lib_tests_pass() {
     let cargo = match find_cargo() {
         Some(c) => c,
         None => {
@@ -90,48 +92,11 @@ fn pippyzippy_lib_tests_pass() {
     };
 
     let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let pippyzippy_path = workspace_root.join("../pippyzippy");
-    if !pippyzippy_path.exists() {
+    let xzippy_path = workspace_root.join("../xzippy");
+    if !xzippy_path.exists() {
         eprintln!(
-            "[skip] pippyzippy not found at {} — per-coder smoke test skipped",
-            pippyzippy_path.display()
-        );
-        return;
-    }
-
-    let output = std::process::Command::new(&cargo)
-        .arg("test")
-        .arg("--lib")
-        .arg("--manifest-path")
-        .arg(pippyzippy_path.join("Cargo.toml"))
-        .output()
-        .expect("failed to spawn cargo test for pippyzippy");
-
-    assert!(
-        output.status.success(),
-        "pippyzippy lib tests failed:\nstdout: {}\nstderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr),
-    );
-}
-
-/// Verify that `lazippier`'s own lib tests pass from 7zippy's perspective.
-#[test]
-fn lazippier_lib_tests_pass() {
-    let cargo = match find_cargo() {
-        Some(c) => c,
-        None => {
-            eprintln!("[skip] cargo not found — per-coder smoke test skipped");
-            return;
-        }
-    };
-
-    let workspace_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let lazippier_path = workspace_root.join("../lazippier");
-    if !lazippier_path.exists() {
-        eprintln!(
-            "[skip] lazippier not found at {} — per-coder smoke test skipped",
-            lazippier_path.display()
+            "[skip] xzippy not found at {} — per-coder smoke test skipped",
+            xzippy_path.display()
         );
         return;
     }
@@ -141,13 +106,13 @@ fn lazippier_lib_tests_pass() {
         .arg("--lib")
         .arg("--no-default-features")
         .arg("--manifest-path")
-        .arg(lazippier_path.join("Cargo.toml"))
+        .arg(xzippy_path.join("Cargo.toml"))
         .output()
-        .expect("failed to spawn cargo test for lazippier");
+        .expect("failed to spawn cargo test for xzippy");
 
     assert!(
         output.status.success(),
-        "lazippier lib tests failed:\nstdout: {}\nstderr: {}",
+        "xzippy lib tests failed:\nstdout: {}\nstderr: {}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
     );

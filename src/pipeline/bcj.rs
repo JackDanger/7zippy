@@ -1,8 +1,11 @@
-//! BCJ (Branch/Call/Jump) family filter coders — via `jumpzippy` sub-crate.
+//! BCJ (Branch/Call/Jump) family filter coders — pure-Rust, in-tree.
 //!
 //! BCJ filters are pre-conditioners that convert architecture-specific
 //! relative branch offsets to absolute addresses, making byte patterns more
 //! repetitive and thus improving subsequent compression (typically LZMA).
+//!
+//! Simple BCJ (6 architectures, 1-stream, stateless) is folded in-tree;
+//! the complex BCJ2 (x86-only, 4-stream, range-coded) lives in `bcjzippy`.
 //!
 //! # 7z method IDs
 //!
@@ -15,12 +18,6 @@
 //! | BCJ ARM-Thumb | `[0x03, 0x03, 0x07, 0x01]`       |
 //! | BCJ SPARC     | `[0x03, 0x03, 0x08, 0x05]`       |
 //!
-//! # Backend
-//!
-//! Delegates to `jumpzippy::{x86,arm,arm_thumb,ppc,ia64,sparc}::encode`/`decode`.
-//! Phase 1 jumpzippy wraps `lzma-rust2`'s BCJ filter module. Phase 2 will
-//! replace with native SIMD-optimized implementations in the `jumpzippy` crate.
-//!
 //! # Properties
 //!
 //! BCJ filters in 7z carry an optional 4-byte start-position property. When
@@ -30,6 +27,10 @@
 //! # Encoding vs decoding symmetry
 //!
 //! BCJ is a self-inverse filter: applying it twice returns the original data.
+
+use std::io::{Read, Write};
+
+use lzma_rust2::filter::bcj::{BcjReader, BcjWriter};
 
 use crate::container::MethodId;
 use crate::error::{SevenZippyError, SevenZippyResult};
@@ -62,9 +63,39 @@ impl BcjArch {
     }
 }
 
+// ── in-tree BCJ encode/decode helpers ────────────────────────────────────────
+
+fn bcj_encode(data: &[u8], arch: BcjArch, pc: usize) -> Vec<u8> {
+    let mut w = match arch {
+        BcjArch::X86 => BcjWriter::new_x86(Vec::new(), pc),
+        BcjArch::PowerPc => BcjWriter::new_ppc(Vec::new(), pc),
+        BcjArch::Ia64 => BcjWriter::new_ia64(Vec::new(), pc),
+        BcjArch::Arm => BcjWriter::new_arm(Vec::new(), pc),
+        BcjArch::ArmThumb => BcjWriter::new_arm_thumb(Vec::new(), pc),
+        BcjArch::Sparc => BcjWriter::new_sparc(Vec::new(), pc),
+    };
+    w.write_all(data).expect("BcjWriter write_all");
+    w.finish().expect("BcjWriter finish")
+}
+
+fn bcj_decode(data: &[u8], arch: BcjArch, pc: usize) -> Vec<u8> {
+    let cursor = std::io::Cursor::new(data);
+    let mut r = match arch {
+        BcjArch::X86 => BcjReader::new_x86(cursor, pc),
+        BcjArch::PowerPc => BcjReader::new_ppc(cursor, pc),
+        BcjArch::Ia64 => BcjReader::new_ia64(cursor, pc),
+        BcjArch::Arm => BcjReader::new_arm(cursor, pc),
+        BcjArch::ArmThumb => BcjReader::new_arm_thumb(cursor, pc),
+        BcjArch::Sparc => BcjReader::new_sparc(cursor, pc),
+    };
+    let mut out = Vec::with_capacity(data.len());
+    r.read_to_end(&mut out).expect("BcjReader read_to_end");
+    out
+}
+
 // ── BcjCoder ─────────────────────────────────────────────────────────────────
 
-/// BCJ filter coder backed by `jumpzippy` (Phase 1).
+/// BCJ filter coder — pure-Rust, in-tree, backed by lzma-rust2's BCJ module.
 pub struct BcjCoder {
     arch: BcjArch,
     /// Starting byte offset for the filter (LE u32 from the properties blob, or 0).
@@ -92,41 +123,15 @@ impl BcjCoder {
         };
         Ok(Self { arch, start_pos })
     }
-
-    /// Apply the BCJ encode transform to `input`, returning filtered bytes.
-    fn apply_encode(&self, input: &[u8]) -> Vec<u8> {
-        let pc = self.start_pos as u64;
-        match self.arch {
-            BcjArch::X86 => jumpzippy::x86::encode(input, pc),
-            BcjArch::PowerPc => jumpzippy::ppc::encode(input, pc),
-            BcjArch::Ia64 => jumpzippy::ia64::encode(input, pc),
-            BcjArch::Arm => jumpzippy::arm::encode(input, pc),
-            BcjArch::ArmThumb => jumpzippy::arm_thumb::encode(input, pc),
-            BcjArch::Sparc => jumpzippy::sparc::encode(input, pc),
-        }
-    }
-
-    /// Apply the BCJ decode transform to `packed`, returning original bytes.
-    fn apply_decode(&self, packed: &[u8]) -> Vec<u8> {
-        let pc = self.start_pos as u64;
-        match self.arch {
-            BcjArch::X86 => jumpzippy::x86::decode(packed, pc),
-            BcjArch::PowerPc => jumpzippy::ppc::decode(packed, pc),
-            BcjArch::Ia64 => jumpzippy::ia64::decode(packed, pc),
-            BcjArch::Arm => jumpzippy::arm::decode(packed, pc),
-            BcjArch::ArmThumb => jumpzippy::arm_thumb::decode(packed, pc),
-            BcjArch::Sparc => jumpzippy::sparc::decode(packed, pc),
-        }
-    }
 }
 
 impl Coder for BcjCoder {
     fn decode(&self, packed: &[u8], _unpacked_size: u64) -> SevenZippyResult<Vec<u8>> {
-        Ok(self.apply_decode(packed))
+        Ok(bcj_decode(packed, self.arch, self.start_pos as usize))
     }
 
     fn encode(&self, unpacked: &[u8]) -> SevenZippyResult<Vec<u8>> {
-        Ok(self.apply_encode(unpacked))
+        Ok(bcj_encode(unpacked, self.arch, self.start_pos as usize))
     }
 
     fn method_id(&self) -> MethodId {
@@ -134,7 +139,6 @@ impl Coder for BcjCoder {
     }
 
     fn properties(&self) -> Vec<u8> {
-        // Omit properties when start_pos is 0 (the common case).
         if self.start_pos == 0 {
             Vec::new()
         } else {
@@ -149,11 +153,8 @@ impl Coder for BcjCoder {
 mod tests {
     use super::*;
 
-    /// BCJ filters are self-inverse: encode(encode(x)) == x.
     fn self_inverse_round_trip(arch: BcjArch, data: &[u8]) {
         let coder = BcjCoder::new(arch);
-        // Encode is the forward transform; decode is the inverse.
-        // So decode(encode(x)) must equal x.
         let encoded = coder.encode(data).unwrap();
         let decoded = coder.decode(&encoded, data.len() as u64).unwrap();
         assert_eq!(decoded, data, "BCJ {arch:?} round-trip failed");

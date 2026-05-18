@@ -1,4 +1,4 @@
-//! LZMA2 coder — raw LZMA2 chunk stream via the `lazippier` sub-crate.
+//! LZMA2 coder — raw LZMA2 chunk stream via the `xzippy` sub-crate.
 //!
 //! 7z's LZMA2 codec (method ID `[0x21]`) stores a raw LZMA2 chunk stream with
 //! a 1-byte properties blob encoding the dictionary size:
@@ -8,8 +8,8 @@
 //!
 //! LZMA2 extends LZMA with multi-chunk streaming and optional uncompressed
 //! chunk passthrough, making it suitable for large files and multi-threaded
-//! encoding. The `lazippier` sub-crate wraps `lzma-rust2`'s `Lzma2Writer` /
-//! `Lzma2Reader` in Phase 1; Phase 2 will replace these with lazippier's
+//! encoding. The `xzippy` sub-crate wraps `lzma-rust2`'s `Lzma2Writer` /
+//! `Lzma2Reader` in Phase 1; Phase 2 will replace these with xzippy's
 //! own native chunk-orchestration implementation.
 
 use crate::container::MethodId;
@@ -22,7 +22,7 @@ use crate::pipeline::Coder;
 /// Use `Lzma2Coder::with_dict_size` to override for larger files.
 const DEFAULT_DICT_SIZE: u32 = 262_144; // 256 KiB
 
-/// LZMA2 coder backed by the `lazippier` sub-crate (Phase 1).
+/// LZMA2 coder backed by the `xzippy` sub-crate (Phase 1).
 pub struct Lzma2Coder {
     /// The 7z properties byte from the archive header.
     /// `None` when constructing for encode (will use `dict_size`).
@@ -83,7 +83,7 @@ impl Coder for Lzma2Coder {
         #[cfg(feature = "lzma2")]
         {
             let props = self.properties();
-            lazippier::decode::decode_7z(packed, &props, _unpacked_size)
+            xzippy::decode::decode_7z(packed, &props, _unpacked_size)
                 .map_err(|e| SevenZippyError::Coder(Box::new(e)))
         }
         #[cfg(not(feature = "lzma2"))]
@@ -95,7 +95,7 @@ impl Coder for Lzma2Coder {
     fn encode(&self, unpacked: &[u8]) -> SevenZippyResult<Vec<u8>> {
         #[cfg(feature = "lzma2")]
         {
-            let (_, compressed) = lazippier::encode::encode_7z(unpacked, self.dict_size)
+            let (_, compressed) = xzippy::encode::encode_7z(unpacked, self.dict_size)
                 .map_err(|e| SevenZippyError::Coder(Box::new(e)))?;
             Ok(compressed)
         }
@@ -114,7 +114,7 @@ impl Coder for Lzma2Coder {
             return vec![b];
         }
         // Encode: compute the props byte from dict_size.
-        let b = lazippier::encode::dict_size_to_props_byte(self.dict_size);
+        let b = xzippy::encode::dict_size_to_props_byte(self.dict_size);
         vec![b]
     }
 }

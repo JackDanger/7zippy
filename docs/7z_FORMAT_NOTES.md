@@ -10,7 +10,7 @@ Quick reference for 7z archive structure and codec routing. See the official spe
 |-----------|-----------|-----------|------|
 | **Copy** | `0x00` | 7zippy (in-tree) | — |
 | **LZMA** | `03 01 01` | lazippy | JackDanger/lazippy |
-| **LZMA2** | `21` | lazippier | JackDanger/lazippier |
+| **LZMA2** | `21` | xzippy | JackDanger/xzippy |
 | **PPMd** | `03 04 01` | pippyzippy | JackDanger/pippyzippy |
 | **BZip2** | `04 02 02` | bzippy2 | JackDanger/bzippy2 |
 | **Deflate** | `04 01 08` | gzippy | JackDanger/gzippy |

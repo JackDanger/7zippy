@@ -102,7 +102,7 @@ pub struct AesFolderEncodeResult {
 /// # Errors
 ///
 /// - `NotYetImplemented` if the `lzma2` feature is not enabled
-/// - Propagates LZMA2 compression errors and lockzippy encrypt errors
+/// - Propagates LZMA2 compression errors and aeszippy encrypt errors
 #[cfg(feature = "aes")]
 pub fn encode_aes_folder(
     plaintext: &[u8],
@@ -128,7 +128,7 @@ pub fn encode_aes_folder(
         let lzma2_compressed_size = compressed.len() as u64;
 
         // Step 2: AES-256-CBC encrypt (with random IV, NumCyclesPower=19).
-        let enc_result = lockzippy::encrypt::encrypt_7z(&compressed, password)
+        let enc_result = aeszippy::encrypt::encrypt_7z(&compressed, password)
             .map_err(|e| crate::error::SevenZippyError::Coder(Box::new(e)))?;
 
         Ok(AesFolderEncodeResult {
@@ -153,7 +153,7 @@ pub fn encode_aes_folder(
 ///
 /// - `NotYetImplemented` if the folder is not the AES+LZMA2 topology
 /// - `InvalidArgument` if the password is empty and the archive is encrypted
-/// - Propagates decrypt errors from lockzippy and decompress errors from lazippier
+/// - Propagates decrypt errors from aeszippy and decompress errors from xzippy
 #[cfg(feature = "aes")]
 pub fn decode_aes_folder(
     folder: &crate::container::Folder,
@@ -169,7 +169,7 @@ pub fn decode_aes_folder(
     // Step 1: AES-256-CBC decrypt.
     // folder.coders[0] = AES; its properties contain NumCyclesPower + IV.
     let aes_coder = &folder.coders[0];
-    let decrypted = lockzippy::decrypt::decrypt_7z(packed, &aes_coder.properties, password)
+    let decrypted = aeszippy::decrypt::decrypt_7z(packed, &aes_coder.properties, password)
         .map_err(|e| SevenZippyError::Coder(Box::new(e)))?;
 
     // Step 2: LZMA2 decompress.
