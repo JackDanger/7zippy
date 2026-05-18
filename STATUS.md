@@ -9,8 +9,8 @@
 | Container header | 7zippy | ✅ | ✅ | n/a | ✅ | ✅ | ⬜ |
 | Copy | 7zippy (in-tree) | ✅ | ✅ | ✅ | ✅ | ✅ | ⬜ |
 | LZMA | lazippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| LZMA2 | lazippier | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| PPMd | pippyzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| LZMA2 | xzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| PPMd | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | BZip2 | bzippy2 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | Deflate | gzippy 0.8 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | Deflate64 | gzippy 0.8 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
@@ -21,7 +21,7 @@
 | BCJ (IA64) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | BCJ (SPARC) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | BCJ2 | jumpzippier 0.0.2 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| Delta | deltazippy | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ |
+| Delta | 7zippy (in-tree) | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ |
 | AES + SHA-256 | lockzippy 0.0.2 | ✅ | ✅ | n/a | ✅ | ⬜ | ⬜ |
 
 **Symbols**: ⬜ not started, 🟡 in progress, ✅ done, ❌ blocked

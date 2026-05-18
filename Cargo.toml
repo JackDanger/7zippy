@@ -25,21 +25,21 @@ path = "src/main.rs"
 thiserror = "1"
 crc32fast = "1"
 
-# Codec sub-crates (feature-gated).
-lazippy    = { version = "0.0.1", path = "../lazippy",    optional = true }
-pippyzippy = { version = "0.0.1", path = "../pippyzippy", optional = true }
-bzippy2    = { version = "0.0.1", path = "../bzippy2",    optional = true }
-# BCJ filters via jumpzippy sub-crate (wraps lzma-rust2 BCJ backend in Phase 1).
-jumpzippy   = { version = "0.0.1", path = "../jumpzippy",  optional = true }
-lazippier   = { version = "0.0.1", path = "../lazippier",   optional = true }
+# External codec sub-crates (feature-gated).
+lazippy     = { version = "0.0.1", path = "../lazippy",     optional = true }
+bzippy2     = { version = "0.0.1", path = "../bzippy2",     optional = true }
+jumpzippy   = { version = "0.0.1", path = "../jumpzippy",   optional = true }
+xzippy      = { version = "0.1.0", path = "../xzippy",      optional = true }
 # gzippy 0.8 exposes raw-deflate primitives (deflate_encode/deflate_decode),
 # Deflate64 decode (decompress_deflate64), and Deflate64 encode
 # (compress_deflate64). Both the deflate and deflate64 features activate this
 # single crate; Cargo deduplicates the dependency.
-gzippy      = { version = "0.8",                            optional = true }
-jumpzippier = { version = "0.0.2", path = "../jumpzippier", optional = true }
-deltazippy  = { version = "0.0.1", path = "../deltazippy",  optional = true }
-lockzippy   = { version = "0.0.2", path = "../lockzippy",   optional = true }
+gzippy      = { version = "0.8",                             optional = true }
+jumpzippier = { version = "0.0.2", path = "../jumpzippier",  optional = true }
+lockzippy   = { version = "0.0.2", path = "../lockzippy",    optional = true }
+
+# In-tree codec backends (formerly separate sub-crates, folded in).
+ppmd-rust   = { version = "1.4",                             optional = true }
 
 [dev-dependencies]
 tempfile = "3"
@@ -51,10 +51,10 @@ lzma      = ["dep:lazippy"]
 deflate   = ["dep:gzippy"]
 deflate64 = ["dep:gzippy"]     # encode + decode via gzippy 0.8
 bzip2     = ["dep:bzippy2"]
-delta     = ["dep:deltazippy"]  # Delta filter via deltazippy sub-crate
-ppmd      = ["dep:pippyzippy"]
+delta     = []                  # Delta filter — pure-Rust, in-tree (no external dep)
+ppmd      = ["dep:ppmd-rust"]  # PPMd — in-tree, backed by ppmd-rust
 bcj       = ["dep:jumpzippy"]   # BCJ filters via jumpzippy sub-crate
-lzma2     = ["dep:lazippier"]
+lzma2     = ["dep:xzippy"]
 bcj2      = ["dep:jumpzippier", "lzma"]  # BCJ2 4-stream filter; requires LZMA for inner stream
 aes       = ["dep:lockzippy"]           # AES-256-CBC decrypt + encrypt (Phase 1)
 

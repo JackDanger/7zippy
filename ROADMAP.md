@@ -16,7 +16,7 @@
 - [ ] LZMA block header parsing
 - [ ] Full LZMA round-trip against 7zz
 
-### Phase 3: LZMA2 Wrapping (lazippier)
+### Phase 3: LZMA2 Wrapping (xzippy)
 - [ ] LZMA2 block decoder
 - [ ] Dictionary reset logic
 - [ ] Streaming LZMA2 unpacking
@@ -61,7 +61,7 @@
 |-----------|----------|------|
 | Phase 1 complete | 1 week | Scaffolding PR merged, STATUS.md live |
 | Phase 2 complete | 3 weeks | lazippy round-trip passing |
-| Phase 3 complete | 2 weeks | lazippier wired, LZMA2 tests green |
+| Phase 3 complete | 2 weeks | xzippy wired, LZMA2 tests green |
 | Phase 4 complete | 3 weeks | bzippy2 archive parsing + round-trip |
 | Phase 5 complete | 2 weeks | gzippy lib PR merged, deflate wired |
 | Phases 6–8 complete | 8 weeks | All major codecs live |

@@ -153,7 +153,7 @@ fn we_read_seven_zips_bzip2_archive() {
     assert_slices_eq!(extracted, input);
 }
 
-// ── LZMA2 cross-validation (live via lazippier sub-crate) ────────────────────
+// ── LZMA2 cross-validation (live via xzippy sub-crate) ───────────────────────
 
 /// Write a small LZMA2 archive with 7zippy, then extract it with `7zz`.
 #[cfg(feature = "lzma2")]
@@ -293,7 +293,7 @@ fn we_read_committed_delta_fixture() {
     assert_slices_eq!(content, expected);
 }
 
-// ── PPMd cross-validation (live via pippyzippy wrapper) ──────────────────────
+// ── PPMd cross-validation ─────────────────────────────────────────────────────
 
 /// Write a small PPMd archive with 7zippy, then extract it with `7zz`.
 #[cfg(feature = "ppmd")]

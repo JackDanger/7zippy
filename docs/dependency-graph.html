@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>7zippy · Dependency &amp; Capability Graph</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#0d1117;color:#e6edf3;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+header{padding:10px 18px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:14px;background:#161b22;flex-shrink:0}
+header h1{font-size:15px;font-weight:700;color:#f0f6fc}
+header p{font-size:11px;color:#8b949e}
+.hdr-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+button{padding:5px 12px;border-radius:6px;border:1px solid #30363d;background:#21262d;color:#c9d1d9;font-size:12px;cursor:pointer;transition:all .15s}
+button:hover{background:#30363d;border-color:#58a6ff}
+button.active{background:#1f3a5f;border-color:#58a6ff;color:#58a6ff}
+.main{flex:1;display:flex;overflow:hidden}
+#gc{flex:1;position:relative;overflow:hidden}
+svg{width:100%;height:100%}
+.node{cursor:pointer}
+.node circle{stroke-width:2;transition:filter .2s}
+.node text{pointer-events:none;user-select:none}
+.node.dimmed{opacity:.07}
+.node.selected circle{stroke:#f0f6fc!important;stroke-width:3}
+.node-label{font-size:11px;font-weight:700;fill:#f0f6fc;text-anchor:middle;dominant-baseline:central}
+.node-sub{font-size:9px;fill:#8b949e;text-anchor:middle}
+.node-ready{font-size:9px;font-weight:700;text-anchor:middle}
+.link{fill:none;stroke-width:1.5}
+.link.depends{stroke:#3b82f6;stroke-opacity:.45}
+.link.wraps{stroke:#f59e0b;stroke-opacity:.5}
+.link.wraps.placeholder{stroke:#f59e0b;stroke-dasharray:3,2;stroke-opacity:.5}
+.link.wraps.redundant{stroke:#ef4444;stroke-width:3;stroke-dasharray:7,3;stroke-opacity:.9}
+.link.oracle{stroke:#a855f7;stroke-dasharray:9,4;stroke-opacity:.6}
+.link.internal-dep{stroke:#fde047;stroke-dasharray:4,4;stroke-opacity:.7}
+.link.planned{stroke:#22c55e;stroke-dasharray:10,5;stroke-width:2;stroke-opacity:.65}
+.link.dimmed{opacity:.04}
+.link.highlighted{stroke-opacity:1!important;stroke-width:2.5}
+.link.wraps.redundant.highlighted{stroke-width:4}
+.layer-label{font-size:9px;fill:#2d333b;text-anchor:middle;text-transform:uppercase;letter-spacing:2.5px;font-weight:800}
+.layer-line{stroke:#21262d;stroke-width:1}
+#detail{width:0;overflow:hidden;transition:width .22s ease;background:#161b22;border-left:1px solid #21262d;flex-shrink:0}
+#detail.open{width:300px}
+.din{padding:16px;width:300px}
+.dh{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.ddot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.dtitle{font-size:14px;font-weight:700;color:#f0f6fc}
+.dsub{font-size:11px;color:#8b949e;margin-bottom:12px}
+.dsec{margin-bottom:12px}
+.dsec-title{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:#58a6ff;font-weight:700;margin-bottom:5px}
+.tag{display:inline-block;background:#1f3a5f;color:#93c5fd;padding:2px 8px;border-radius:4px;font-size:11px;margin:2px;border:1px solid #1e40af40}
+.warn{display:block;background:#431407;color:#fb923c;padding:6px 10px;border-radius:6px;font-size:11px;border:1px solid #9a3412;margin-top:5px}
+.note{display:block;background:#0d2218;color:#86efac;padding:6px 10px;border-radius:6px;font-size:11px;border:1px solid #166534;margin-top:5px}
+.phase{display:block;background:#1a1d2e;color:#a5b4fc;padding:6px 10px;border-radius:6px;font-size:11px;border:1px solid #3730a3;margin-top:5px}
+.perm{display:block;background:#0d2218;color:#4ade80;padding:6px 10px;border-radius:6px;font-size:11px;border:1px solid #15803d;margin-top:5px}
+.xbtn{margin-left:auto;background:none;border:none;color:#8b949e;cursor:pointer;font-size:18px;line-height:1;padding:2px 4px}
+.xbtn:hover{color:#f0f6fc}
+#legend{position:absolute;bottom:14px;left:14px;background:#161b22ee;border:1px solid #21262d;border-radius:8px;padding:10px 14px;font-size:11px}
+.ltitle{font-size:9px;text-transform:uppercase;letter-spacing:2px;color:#8b949e;margin-bottom:7px;font-weight:700}
+.lrow{display:flex;align-items:center;gap:7px;margin-bottom:4px;color:#c9d1d9}
+.lswatch{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+#tip{position:fixed;background:#21262d;border:1px solid #30363d;border-radius:6px;padding:5px 10px;font-size:11px;color:#e6edf3;pointer-events:none;opacity:0;transition:opacity .12s;z-index:999;max-width:240px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>7zippy · Dependency &amp; Capability Graph</h1>
+    <p>Sub-crates, backends, oracle, and redundancies — click any node for details · drag to rearrange</p>
+  </div>
+  <div class="hdr-right">
+    <button id="btn-r">⚠ Redundancies</button>
+    <button id="btn-p">🔮 Phase 2 plan</button>
+    <button id="btn-reset">Reset</button>
+  </div>
+</header>
+<div class="main">
+  <div id="gc">
+    <svg id="g"></svg>
+    <div id="legend">
+      <div class="ltitle">Node Types</div>
+      <div class="lrow"><div class="lswatch" style="background:#1d4ed8"></div> 7zippy (main)</div>
+      <div class="lrow"><div class="lswatch" style="background:#7e22ce"></div> Oracle (7-Zip reference)</div>
+      <div class="lrow"><div class="lswatch" style="background:#0369a1"></div> Sub-crate (wrapper)</div>
+      <div class="lrow"><div class="lswatch" style="background:#155e75"></div> Sub-crate (hybrid)</div>
+      <div class="lrow"><div class="lswatch" style="background:#15803d"></div> Sub-crate (pure Rust)</div>
+      <div class="lrow"><div class="lswatch" style="background:#6d28d9"></div> Sub-crate (permanent crypto)</div>
+      <div class="lrow"><div class="lswatch" style="background:#78350f"></div> Backend (Phase 1 placeholder)</div>
+      <div class="lrow"><div class="lswatch" style="background:#b91c1c"></div> Backend (shared ×4 ⚠)</div>
+      <div class="lrow"><div class="lswatch" style="background:#92400e"></div> Backend (permanent)</div>
+      <div style="margin:7px 0 5px;border-top:1px solid #21262d"></div>
+      <div class="ltitle">Edge Types</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#3b82f6" stroke-width="2"/></svg> depends on</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#f59e0b" stroke-width="2"/></svg> wraps (permanent)</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#f59e0b" stroke-width="2" stroke-dasharray="3,2"/></svg> wraps (Phase 1 placeholder)</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="5,2"/></svg> redundant wrap ⚠</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#22c55e" stroke-width="2" stroke-dasharray="8,4"/></svg> planned Phase 2 dep</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#a855f7" stroke-width="2" stroke-dasharray="6,3"/></svg> oracle test</div>
+      <div class="lrow"><svg width="22" height="8"><line x1="0" y1="4" x2="22" y2="4" stroke="#fde047" stroke-width="2" stroke-dasharray="3,3"/></svg> internal / feature dep</div>
+    </div>
+    <div id="tip"></div>
+  </div>
+  <div id="detail"><div class="din" id="dc"></div></div>
+</div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ────────────────────────────────────────────────────────────
+// DATA
+// ────────────────────────────────────────────────────────────
+// type → fill color
+const C = {
+  main:"#1d4ed8",
+  oracle:"#7e22ce",
+  subcrate:"#0369a1",          // Phase 1 wrapper
+  "subcrate-hybrid":"#155e75", // partially native
+  "subcrate-pure":"#15803d",   // fully native (deltazippy)
+  "subcrate-crypto":"#6d28d9", // permanent (lockzippy)
+  "backend-placeholder":"#78350f", // Phase 1 throwaway
+  "backend-shared":"#b91c1c",      // shared ×4 ⚠
+  "backend-perm":"#92400e",        // permanent backend
+};
+
+const NODES = [
+  // ── Layer 0 ──────────────────────────────────────────────
+  {id:"7zippy", label:"7zippy", sub:"Pure-Rust 7z archive", type:"main", layer:0, r:42,
+   ready:null,
+   caps:["7z archive read / write","Container header parsing","Coder dispatch pipeline","Copy codec (in-tree, identity)","Multi-folder archive support"],
+   status:"Phase 1 complete — all 16 rows: Decode✅ Encode✅ Oracle✅\nPhase 2: native rewrites starting with lazippy range coder",
+  },
+  {id:"7zz", label:"7-Zip (7zz)", sub:"Oracle · C++ reference", type:"oracle", layer:0, r:40,
+   ready:null,
+   caps:["LZMA, LZMA2","PPMd","BZip2","Deflate, Deflate64","BCJ (x86/ARM/ARM-Thumb/PPC/IA64/SPARC)","BCJ2 (4-stream)","Delta","AES-256 + SHA-256","7z, ZIP, tar, ISO, cab…"],
+   note:"Igor Pavlov's C++ impl — the ground truth for all oracle tests.\nEvery sub-crate has its own oracle test suite against 7zz, not just 7zippy.",
+  },
+
+  // ── Layer 1: sub-crates ──────────────────────────────────
+  {id:"lazippy", label:"lazippy", sub:"LZMA · 0% native", type:"subcrate", layer:1, r:27,
+   ready:0,
+   caps:["LZMA encode / decode","Range coder (arithmetic coding)","Literal / length-distance model"],
+   phase:"Phase 2 primary target: native range coder replaces lzma-rust2.\nWill become the shared range coder for lazippier, jumpzippy, jumpzippier.",
+  },
+  {id:"lazippier", label:"lazippier", sub:"LZMA2 · 0% native", type:"subcrate", layer:1, r:25,
+   ready:0,
+   caps:["LZMA2 encode / decode","Multi-chunk streams","Chunk reset mechanism"],
+   phase:"LZMA2 = LZMA chunks + framing. Phase 2: will consume lazippy's native range coder rather than duplicate it.",
+  },
+  {id:"pippyzippy", label:"pippyzippy", sub:"PPMd · 0% native", type:"subcrate", layer:1, r:25,
+   ready:0,
+   caps:["PPMd compress / decompress","Prediction by Partial Matching","Order-8 context model"],
+  },
+  {id:"bzippy2", label:"bzippy2", sub:"BZip2 · ~100% Rust", type:"subcrate", layer:1, r:25,
+   ready:95,
+   caps:["BZip2 compress / decompress","Burrows-Wheeler Transform","Move-to-front + Huffman coding"],
+   note:"bzip2 v0.6 defaults to libbzip2-rs (pure Rust rewrite of libbz2) — not the C library. This is effectively a pure-Rust dep, not a C FFI wrapper.",
+  },
+  {id:"gzippy", label:"gzippy", sub:"Deflate · Gzip", type:"subcrate-hybrid", layer:1, r:38,
+   ready:null,
+   caps:["Deflate compress / decompress","Deflate64 compress / decompress","Gzip (parallel multi-block)","BGZF (block gzip / tabix compatible)","Raw deflate (no wrapper header)"],
+   note:"4 tiered backends (deliberate, not accidental redundancy):\n• ISA-L (optional, x86 L0-L3 fastest)\n• libdeflate (decompress, always on)\n• flate2+zlib-ng (L4-L8, always on)\n• Zopfli C (L9 max ratio, always on)\n\nISA-L is feature-gated. Zopfli is the oracle/reference impl, not test-only.",
+  },
+  {id:"jumpzippy", label:"jumpzippy", sub:"BCJ filters · 0% native", type:"subcrate", layer:1, r:28,
+   ready:0,
+   caps:["BCJ x86","BCJ ARM","BCJ ARM-Thumb","BCJ PowerPC","BCJ IA64","BCJ SPARC"],
+   note:"All 6 arch filter files delegate to lzma_rust2::filter::bcj::{BcjReader, BcjWriter}. Phase 2: BCJ is pure bitwise arithmetic — candidate for native rewrite shared with lazippy.",
+  },
+  {id:"jumpzippier", label:"jumpzippier", sub:"BCJ2 · ~30% native", type:"subcrate-hybrid", layer:1, r:25,
+   ready:30,
+   caps:["BCJ2 4-stream branch filter","Combines J + S0 + S1 + S2 sub-streams"],
+   note:"Hybrid: encode uses a native range coder (src/encode/range_enc.rs). Decode still delegates to lzma_rust2::filter::bcj2::Bcj2Reader.\nFeature dep: bcj2 = [dep:jumpzippier, lzma] — requires lazippy.",
+  },
+  {id:"deltazippy", label:"deltazippy", sub:"Delta · 100% native", type:"subcrate-pure", layer:1, r:24,
+   ready:100,
+   caps:["Delta encode / decode","Configurable stride (1–255 bytes)","Zero external deps"],
+   note:"✨ Only sub-crate that is already a complete native implementation — no backend to replace. The permanent end-state shape for the family.",
+  },
+  {id:"lockzippy", label:"lockzippy", sub:"AES-256 · permanent", type:"subcrate-crypto", layer:1, r:25,
+   ready:100,
+   caps:["AES-256-CBC encrypt / decrypt","SHA-256 key derivation (7z format)","7z encryption envelope","IV generation via getrandom (entropy needed)"],
+   note:"RustCrypto (aes + sha2 + cbc) is the intended permanent backend — not a Phase 1 placeholder. lockzippy is effectively complete at current state.",
+  },
+
+  // ── Layer 2: backends ────────────────────────────────────
+  {id:"lzma-rust2", label:"lzma-rust2", sub:"v0.16 · shared ×4 ⚠", type:"backend-shared", layer:2, r:36,
+   caps:["LZMA encode/decode (→ lazippy)","LZMA2 encode/decode (→ lazippier)","BCJ filter logic all arches (→ jumpzippy)","BCJ2 reader (→ jumpzippier decode)"],
+   warn:"4 sub-crates all wrap THIS one library. A Phase 2 native lazippy does not remove it — lazippier, jumpzippy, jumpzippier still depend on it until their own native rewrites land.",
+  },
+  {id:"ppmd-rust", label:"ppmd-rust", sub:"v1.4 · Phase 1 placeholder", type:"backend-placeholder", layer:2, r:22,
+   caps:["PPMd compress / decompress"],
+  },
+  {id:"bzip2-crate", label:"bzip2 crate", sub:"v0.6 · libbzip2-rs (Rust)", type:"backend-perm", layer:2, r:23,
+   caps:["BZip2 compress / decompress","libbzip2-rs — pure-Rust rewrite of libbz2","No C FFI (despite package name)"],
+   note:"bzip2 v0.6 links libbzip2-rs by default, which is a pure-Rust port. Not a C libbz2 binding. Consider permanent rather than placeholder.",
+  },
+  {id:"flate2-zlibng", label:"flate2 + zlib-ng", sub:"Deflate L4-L8 · permanent", type:"backend-perm", layer:2, r:26,
+   caps:["Deflate compress (L4-L8)","SIMD-optimized zlib fork (~2-3× faster)","Rust bindings via libz-ng-sys"],
+  },
+  {id:"libdeflater", label:"libdeflater", sub:"Decompress · permanent", type:"backend-perm", layer:2, r:26,
+   caps:["Deflate decompress","30-50% faster than zlib for in-memory ops","C library via Rust FFI (libdeflate-sys)"],
+  },
+  {id:"isal-rs", label:"isal-rs (ISA-L)", sub:"Deflate L0-L3 · optional", type:"backend-perm", layer:2, r:27,
+   caps:["Deflate compress (L0-L3, fastest path)","Intel AVX2 / SIMD assembly","Feature-gated: isal-compression — x86 only"],
+   note:"Optional Cargo feature (isal-compression). Falls back to flate2+zlib-ng when not available.",
+  },
+  {id:"zopfli", label:"Zopfli (C)", sub:"Deflate L9 · always on", type:"backend-perm", layer:2, r:22,
+   caps:["Deflate compress (L9, best ratio)","Optimal parsing — slow, smallest output","Vendored C reference impl (always compiled)"],
+  },
+  {id:"aes-sha2-cbc", label:"aes + sha2 + cbc", sub:"RustCrypto · permanent", type:"backend-perm", layer:2, r:26,
+   caps:["AES-256 block cipher (pure Rust)","SHA-256 hash function","CBC mode chaining","getrandom for IV entropy"],
+  },
+];
+
+// ── Links ─────────────────────────────────────────────────────
+// type: depends | wraps | oracle | internal-dep | planned
+// redundant: true  →  red dashed
+// placeholder: true → amber dashed (Phase 1 will be replaced)
+const LINKS = [
+  // 7zippy → sub-crates
+  {s:"7zippy", t:"lazippy",     type:"depends"},
+  {s:"7zippy", t:"lazippier",   type:"depends"},
+  {s:"7zippy", t:"pippyzippy",  type:"depends"},
+  {s:"7zippy", t:"bzippy2",     type:"depends"},
+  {s:"7zippy", t:"gzippy",      type:"depends"},
+  {s:"7zippy", t:"jumpzippy",   type:"depends"},
+  {s:"7zippy", t:"jumpzippier", type:"depends"},
+  {s:"7zippy", t:"deltazippy",  type:"depends"},
+  {s:"7zippy", t:"lockzippy",   type:"depends"},
+  // oracle
+  {s:"7zippy",     t:"7zz", type:"oracle"},
+  // BCJ2 feature dep on lzma feature (current + planned shared range coder)
+  {s:"jumpzippier", t:"lazippy", type:"internal-dep"},
+  // sub-crates → backends — REDUNDANT: lzma-rust2
+  {s:"lazippy",     t:"lzma-rust2", type:"wraps", redundant:true, placeholder:true},
+  {s:"lazippier",   t:"lzma-rust2", type:"wraps", redundant:true, placeholder:true},
+  {s:"jumpzippy",   t:"lzma-rust2", type:"wraps", redundant:true, placeholder:true},
+  {s:"jumpzippier", t:"lzma-rust2", type:"wraps", redundant:true, placeholder:true},
+  // non-redundant backends — placeholder
+  {s:"pippyzippy", t:"ppmd-rust",   type:"wraps", placeholder:true},
+  // non-redundant backends — permanent
+  {s:"bzippy2",   t:"bzip2-crate",   type:"wraps"},
+  {s:"gzippy",    t:"flate2-zlibng", type:"wraps"},
+  {s:"gzippy",    t:"libdeflater",   type:"wraps"},
+  {s:"gzippy",    t:"isal-rs",       type:"wraps"},
+  {s:"gzippy",    t:"zopfli",        type:"wraps"},
+  {s:"lockzippy", t:"aes-sha2-cbc",  type:"wraps"},
+  // Phase 2 planned: lazippier will consume lazippy's native range coder
+  {s:"lazippier",   t:"lazippy", type:"planned"},
+  // Phase 2 planned: jumpzippy BCJ will consolidate range coder via lazippy
+  {s:"jumpzippy",   t:"lazippy", type:"planned"},
+];
+
+// ── resolve ───────────────────────────────────────────────────
+const byId = Object.fromEntries(NODES.map(n=>[n.id,n]));
+const links = LINKS.map(l=>({...l, source:byId[l.s], target:byId[l.t]}));
+
+// ── SVG ───────────────────────────────────────────────────────
+const gc=document.getElementById("gc");
+const svg=d3.select("#g");
+const detail=document.getElementById("detail");
+const dc=document.getElementById("dc");
+const tip=document.getElementById("tip");
+
+let W=gc.clientWidth, H=gc.clientHeight;
+const LY={0:.16, 1:.50, 2:.84};
+function ly(l){return H*LY[l];}
+
+function initX(){
+  [0,1,2].forEach(layer=>{
+    const ns=NODES.filter(n=>n.layer===layer);
+    const mg=90;
+    ns.forEach((n,i)=>{
+      n.x=ns.length===1?W/2:mg+i*(W-2*mg)/(ns.length-1);
+      n.y=ly(layer);
+    });
+  });
+}
+initX();
+
+// ── defs ──────────────────────────────────────────────────────
+const defs=svg.append("defs");
+[{id:"dep",c:"#3b82f6"},{id:"wrap",c:"#f59e0b"},{id:"redund",c:"#ef4444"},
+ {id:"oracle",c:"#a855f7"},{id:"idep",c:"#fde047"},{id:"plan",c:"#22c55e"}
+].forEach(m=>{
+  defs.append("marker").attr("id","a-"+m.id)
+    .attr("viewBox","0 -5 10 10").attr("refX",10).attr("refY",0)
+    .attr("markerWidth",6).attr("markerHeight",6).attr("orient","auto")
+    .append("path").attr("d","M0,-5L10,0L0,5").attr("fill",m.c).attr("opacity",.8);
+});
+// glow filter for shared backend
+const gf=defs.append("filter").attr("id","glow").attr("x","-60%").attr("y","-60%").attr("width","220%").attr("height","220%");
+gf.append("feGaussianBlur").attr("in","SourceGraphic").attr("stdDeviation","6").attr("result","b");
+const fm=gf.append("feMerge"); fm.append("feMergeNode").attr("in","b"); fm.append("feMergeNode").attr("in","SourceGraphic");
+
+const root=svg.append("g");
+
+// layer guides
+[0,1,2].forEach(l=>{
+  const y=ly(l);
+  root.append("line").attr("class","layer-line").attr("x1",12).attr("y1",y-54).attr("x2",W-12).attr("y2",y-54);
+  root.append("text").attr("class","layer-label").attr("x",W/2).attr("y",y-41)
+    .text(["MAIN APPLICATION + ORACLE","ZIPPY SUB-CRATES","BACKEND LIBRARIES"][l]);
+});
+
+// ── force sim ─────────────────────────────────────────────────
+const sim=d3.forceSimulation(NODES)
+  .force("link", d3.forceLink(links).id(d=>d.id).distance(d=>d.type==="planned"?160:130).strength(.18))
+  .force("charge", d3.forceManyBody().strength(-260))
+  .force("col", d3.forceCollide(d=>d.r+22))
+  .force("y", d3.forceY(d=>ly(d.layer)).strength(.88))
+  .force("x", d3.forceX(d=>d.x).strength(.04));
+
+// ── link elements ─────────────────────────────────────────────
+function markerFor(d){
+  if(d.redundant) return "url(#a-redund)";
+  if(d.type==="oracle") return "url(#a-oracle)";
+  if(d.type==="internal-dep") return "url(#a-idep)";
+  if(d.type==="planned") return "url(#a-plan)";
+  if(d.type==="wraps") return "url(#a-wrap)";
+  return "url(#a-dep)";
+}
+function linkClass(d){
+  let c="link "+d.type;
+  if(d.redundant) c+=" redundant";
+  else if(d.placeholder) c+=" placeholder";
+  return c;
+}
+
+const lg=root.append("g");
+const lEl=lg.selectAll("path").data(links).join("path")
+  .attr("class",linkClass)
+  .attr("marker-end",markerFor);
+
+// ── node elements ─────────────────────────────────────────────
+const ng=root.append("g");
+const nEl=ng.selectAll("g").data(NODES).join("g")
+  .attr("class","node")
+  .call(d3.drag()
+    .on("start",(e,d)=>{ if(!e.active)sim.alphaTarget(.3).restart(); d.fx=d.x;d.fy=d.y; })
+    .on("drag",(e,d)=>{ d.fx=e.x;d.fy=e.y; })
+    .on("end",(e,d)=>{ if(!e.active)sim.alphaTarget(0); d.fx=null;d.fy=null; })
+  )
+  .on("click",(e,d)=>{ e.stopPropagation(); selectNode(d); })
+  .on("mouseover",(e,d)=>showTip(e,d))
+  .on("mousemove",e=>moveTip(e))
+  .on("mouseout",hideTip);
+
+nEl.append("circle")
+  .attr("r",d=>d.r)
+  .attr("fill",d=>C[d.type]||"#555")
+  .attr("stroke",d=>{ const c=C[d.type]||"#555"; return d3.color(c)?.brighter(.7)?.toString()||"#888"; })
+  .attr("stroke-width",d=>d.type==="backend-shared"?3:1.5)
+  .style("filter",d=>d.type==="backend-shared"?"url(#glow)":null);
+
+nEl.append("text").attr("class","node-label").attr("y",-4).text(d=>d.label);
+nEl.append("text").attr("class","node-sub").attr("y",9).text(d=>d.sub);
+
+// ready % ring / badge
+nEl.each(function(d){
+  if(d.ready===null||d.ready===undefined) return;
+  const color = d.ready===100?"#22c55e":d.ready>=50?"#f59e0b":"#ef4444";
+  const txt = d.ready+"%";
+  d3.select(this).append("text").attr("class","node-ready")
+    .attr("y", d.r+11).attr("fill",color).text(txt);
+});
+
+// ── tick ──────────────────────────────────────────────────────
+function pathFor(d){
+  const sx=d.source.x,sy=d.source.y,tx=d.target.x,ty=d.target.y;
+  const dx=tx-sx,dy=ty-sy,dist=Math.sqrt(dx*dx+dy*dy)||1;
+  const tr=d.target.r+8;
+  const ex=sx+dx*(dist-tr)/dist,ey=sy+dy*(dist-tr)/dist;
+  if(Math.abs(sy-ty)<70){
+    const cx=(sx+tx)/2,cy=(sy+ty)/2-55;
+    return `M${sx},${sy} Q${cx},${cy} ${ex},${ey}`;
+  }
+  return `M${sx},${sy} L${ex},${ey}`;
+}
+
+sim.on("tick",()=>{
+  lEl.attr("d",pathFor);
+  nEl.attr("transform",d=>`translate(${d.x},${d.y})`);
+});
+
+// ── selection ─────────────────────────────────────────────────
+let selected=null;
+function selectNode(d){
+  if(selected===d){clearSel();return;}
+  selected=d;
+  const conn=new Set([d.id]);
+  links.forEach(l=>{ if(l.source.id===d.id)conn.add(l.target.id); if(l.target.id===d.id)conn.add(l.source.id); });
+  nEl.classed("dimmed",n=>!conn.has(n.id)).classed("selected",n=>n.id===d.id);
+  lEl.classed("dimmed",l=>l.source.id!==d.id&&l.target.id!==d.id)
+     .classed("highlighted",l=>l.source.id===d.id||l.target.id===d.id);
+  showDetail(d);
+}
+function clearSel(){
+  selected=null;
+  nEl.classed("dimmed",false).classed("selected",false);
+  lEl.classed("dimmed",false).classed("highlighted",false);
+  detail.classList.remove("open");
+}
+svg.on("click",clearSel);
+
+function showDetail(d){
+  const col=C[d.type]||"#555";
+  const out=links.filter(l=>l.source.id===d.id);
+  const inc=links.filter(l=>l.target.id===d.id);
+  let h=`<div class="dh"><div class="ddot" style="background:${col}"></div><div class="dtitle">${d.label}</div>
+    <button class="xbtn" onclick="document.getElementById('detail').classList.remove('open')">×</button></div>
+    <div class="dsub">${d.sub}</div>`;
+  if(d.ready!==null&&d.ready!==undefined){
+    const col2=d.ready===100?"#22c55e":d.ready>=50?"#f59e0b":"#ef4444";
+    h+=`<div class="dsec"><div class="dsec-title">Native readiness</div>
+      <div style="background:#21262d;border-radius:4px;overflow:hidden;height:8px;margin-bottom:4px">
+        <div style="width:${d.ready}%;height:100%;background:${col2};transition:width .4s"></div>
+      </div>
+      <span style="font-size:11px;color:${col2}">${d.ready}% native Rust</span></div>`;
+  }
+  if(d.caps?.length){h+=`<div class="dsec"><div class="dsec-title">Implements</div>${d.caps.map(c=>`<span class="tag">${c}</span>`).join("")}</div>`;}
+  if(d.status){h+=`<div class="dsec"><div class="dsec-title">Status</div><span class="note">${d.status.replace(/\n/g,"<br>")}</span></div>`;}
+  if(d.phase){h+=`<div class="dsec"><div class="dsec-title">Phase 2 plan</div><span class="phase">${d.phase.replace(/\n/g,"<br>")}</span></div>`;}
+  if(d.warn){h+=`<div class="dsec"><div class="dsec-title">⚠ Redundancy</div><span class="warn">${d.warn}</span></div>`;}
+  if(d.note){h+=`<div class="dsec"><div class="dsec-title">Notes</div><span class="note">${d.note.replace(/\n/g,"<br>")}</span></div>`;}
+  if(out.length){
+    h+=`<div class="dsec"><div class="dsec-title">Depends on / wraps</div>
+      ${out.map(l=>{
+        let badge="tag";
+        let extra="";
+        if(l.redundant) extra=' style="background:#431407;color:#fb923c;border-color:#9a3412"';
+        if(l.type==="planned") extra=' style="background:#052e16;color:#4ade80;border-color:#166534"';
+        return `<span class="${badge}"${extra}>${l.target.id}${l.type==="planned"?" (planned)":""}</span>`;
+      }).join("")}</div>`;
+  }
+  if(inc.length){h+=`<div class="dsec"><div class="dsec-title">Used by</div>${inc.map(l=>`<span class="tag">${l.source.id}</span>`).join("")}</div>`;}
+  dc.innerHTML=h;
+  detail.classList.add("open");
+}
+
+// ── tooltip ───────────────────────────────────────────────────
+function showTip(e,d){tip.style.opacity=1;tip.innerHTML=`<strong>${d.label}</strong> · ${d.sub}`;moveTip(e);}
+function moveTip(e){tip.style.left=(e.clientX+14)+"px";tip.style.top=(e.clientY-30)+"px";}
+function hideTip(){tip.style.opacity=0;}
+
+// ── redundancy mode ───────────────────────────────────────────
+let rMode=false,pMode=false;
+document.getElementById("btn-r").addEventListener("click",function(){
+  pMode=false; document.getElementById("btn-p").classList.remove("active");
+  rMode=!rMode; this.classList.toggle("active",rMode);
+  lEl.style("opacity",null); nEl.style("opacity",null);
+  if(rMode){
+    const rNodes=new Set(["lazippy","lazippier","jumpzippy","jumpzippier","lzma-rust2"]);
+    lEl.style("opacity",l=>l.redundant?1:.04);
+    nEl.style("opacity",n=>rNodes.has(n.id)?1:.08);
+  }
+});
+
+// ── phase 2 plan mode ─────────────────────────────────────────
+document.getElementById("btn-p").addEventListener("click",function(){
+  rMode=false; document.getElementById("btn-r").classList.remove("active");
+  pMode=!pMode; this.classList.toggle("active",pMode);
+  lEl.style("opacity",null); nEl.style("opacity",null);
+  if(pMode){
+    const pNodes=new Set(["lazippy","lazippier","jumpzippy","jumpzippier","lzma-rust2"]);
+    lEl.style("opacity",l=>l.type==="planned"||l.redundant?1:.04);
+    nEl.style("opacity",n=>pNodes.has(n.id)?1:.1);
+  }
+});
+
+// ── reset ─────────────────────────────────────────────────────
+document.getElementById("btn-reset").addEventListener("click",()=>{
+  rMode=false; pMode=false;
+  document.getElementById("btn-r").classList.remove("active");
+  document.getElementById("btn-p").classList.remove("active");
+  lEl.style("opacity",null); nEl.style("opacity",null);
+  clearSel(); initX();
+  NODES.forEach(n=>{n.vx=0;n.vy=0;});
+  sim.alpha(.8).restart();
+});
+
+// ── resize ────────────────────────────────────────────────────
+new ResizeObserver(()=>{
+  W=gc.clientWidth; H=gc.clientHeight;
+  svg.attr("viewBox",`0 0 ${W} ${H}`);
+  sim.force("y",d3.forceY(d=>ly(d.layer)).strength(.88));
+  sim.alpha(.4).restart();
+}).observe(gc);
+
+svg.attr("viewBox",`0 0 ${W} ${H}`);
+sim.alpha(1).restart();
+</script>
+</body>
+</html>

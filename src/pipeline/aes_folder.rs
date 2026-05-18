@@ -153,7 +153,7 @@ pub fn encode_aes_folder(
 ///
 /// - `NotYetImplemented` if the folder is not the AES+LZMA2 topology
 /// - `InvalidArgument` if the password is empty and the archive is encrypted
-/// - Propagates decrypt errors from lockzippy and decompress errors from lazippier
+/// - Propagates decrypt errors from lockzippy and decompress errors from xzippy
 #[cfg(feature = "aes")]
 pub fn decode_aes_folder(
     folder: &crate::container::Folder,
