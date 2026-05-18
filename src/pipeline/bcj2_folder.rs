@@ -17,7 +17,7 @@
 //!   packed[2] → BCJ2 input slot 3    (JMP offsets; may be LZMA-compressed)
 //!   packed[3] → BCJ2 input slot 0    (range-coder stream; raw)
 //!
-//! BCJ2 4-stream order (as jumpzippier expects):
+//! BCJ2 4-stream order (as bcjzippy expects):
 //!   streams[0] = main      ← LZMA decode of packed[0]
 //!   streams[1] = call      ← packed[1] (raw in 7zz defaults)
 //!   streams[2] = jump      ← packed[2] (raw in 7zz defaults)
@@ -99,7 +99,7 @@ pub fn decode_bcj2_folder(
     };
 
     // Step 2: BCJ2 reassembly.
-    // jumpzippier expects [main, call, jump, range_coder].
+    // bcjzippy expects [main, call, jump, range_coder].
     // packed_streams layout from 7z spec:
     //   packed_streams[0] was LZMA main → already decoded above as main_stream
     //   packed_streams[1] → call offsets
@@ -107,7 +107,7 @@ pub fn decode_bcj2_folder(
     //   packed_streams[3] → range_coder
     let bcj2_unpack_size = folder.unpack_sizes.last().copied().unwrap_or(0);
 
-    jumpzippier::decode::decode_4streams(
+    bcjzippy::decode::decode_4streams(
         [
             main_stream.as_slice(),
             packed_streams[1],

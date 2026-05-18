@@ -209,7 +209,7 @@ pub fn encode_bcj2_folder(plaintext: &[u8]) -> SevenZippyResult<(Vec<Vec<u8>>, F
     use crate::container::Bond;
 
     // Step 1: BCJ2 split.
-    let [main_raw, call, jump, rc] = jumpzippier::encode::encode_4streams(plaintext);
+    let [main_raw, call, jump, rc] = bcjzippy::encode::encode_4streams(plaintext);
 
     // Step 2: LZMA-compress the main stream.
     const DICT_SIZE: u32 = 1 << 20; // 1 MiB — fast in tests

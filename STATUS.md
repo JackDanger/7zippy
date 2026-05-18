@@ -14,15 +14,15 @@
 | BZip2 | bzippy2 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | Deflate | gzippy 0.8 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | Deflate64 | gzippy 0.8 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ (x86) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ (ARM) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ (ARM-Thumb) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ (PPC) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ (IA64) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ (SPARC) | jumpzippy | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
-| BCJ2 | jumpzippier 0.0.2 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ (x86) | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ (ARM) | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ (ARM-Thumb) | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ (PPC) | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ (IA64) | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ (SPARC) | 7zippy (in-tree) | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
+| BCJ2 | bcjzippy 0.0.3 | ✅ | ✅ | ⬜ | ✅ | ⬜ | ⬜ |
 | Delta | 7zippy (in-tree) | ✅ | ✅ | ✅ | ✅ | ⬜ | ⬜ |
-| AES + SHA-256 | lockzippy 0.0.2 | ✅ | ✅ | n/a | ✅ | ⬜ | ⬜ |
+| AES + SHA-256 | aeszippy 0.0.3 | ✅ | ✅ | n/a | ✅ | ⬜ | ⬜ |
 
 **Symbols**: ⬜ not started, 🟡 in progress, ✅ done, ❌ blocked
 
